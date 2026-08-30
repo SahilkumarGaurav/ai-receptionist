@@ -54,7 +54,7 @@ case "$cmd" in
     test)
         echo "Testing configuration..."
         cd "$APP_DIR"
-        sudo -u deploy bash -c "source .venv/bin/activate && python -c '
+        sudo -u deploy bash -c "source .venv/bin/activate && python -c"
 import os
 from dotenv import load_dotenv
 load_dotenv()
