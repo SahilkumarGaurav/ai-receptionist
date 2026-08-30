@@ -1,0 +1,17 @@
+[project]
+name = "very-last-attempt"
+version = "0.1.0"
+description = "Add your description here"
+readme = "README.md"
+requires-python = ">=3.14"
+dependencies = [
+    "python-dotenv>=1.2.2",
+    "tzdata>=2026.3",
+    "websockets>=17.0.1",
+    "google-auth>=2.30.0",
+    "google-auth-oauthlib>=1.2.0",
+    "google-auth-httplib2>=0.2.0",
+    "google-api-python-client>=2.120.0",
+    "apscheduler>=3.10.0",
+    "resend>=2.41.0",
+]

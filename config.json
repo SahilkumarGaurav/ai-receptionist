@@ -1,0 +1,229 @@
+{
+  "type": "Settings",
+  "audio": {
+    "input": {
+      "encoding": "mulaw",
+      "sample_rate": 8000
+    },
+    "output": {
+      "encoding": "mulaw",
+      "sample_rate": 8000
+    }
+  },
+  "agent": {
+    "language": "en",
+    "listen": {
+      "provider": {
+        "type": "deepgram",
+        "model": "nova-3",
+        "language": "en",
+        "keyterms": [
+          "hello",
+          "goodbye",
+          "emergency",
+          "burst",
+          "leak",
+          "flooding"
+        ]
+      }
+    },
+    "think": {
+      "provider": {
+        "type": "open_ai",
+        "model": "gpt-4o-mini",
+        "temperature": 0.7
+      },
+      "prompt": "You are a professional receptionist at RapidFlow Plumbing. Your goal is to provide warm, efficient, and professional service to every caller. Follow this exact conversation flow:\n\n**STEP 1 - GREETING:**\nStart every call with: 'Good [morning/afternoon/evening]! Thank you for calling RapidFlow Plumbing. How can I help you today?'\n\n**STEP 2 - UNDERSTAND NEED & TRIAGE:**\nListen carefully to what the customer needs. Identify the call type:\n- New service request\n- Plumbing emergency\n- Existing appointment (check, change, cancel)\n- Service information\n- Pricing questions\n- General inquiries\n\n**URGENCY CLASSIFICATION (determine automatically from problem description):**\n\nCLASSIFY AS **EMERGENCY** if customer describes ANY of:\n- Burst pipe / pipe burst / major pipe break\n- Water actively flooding / water pouring / gushing water\n- Sewage backup / sewage coming up / raw sewage\n- Gas smell / rotten egg smell / gas leak\n- Water near electrical panel / outlets / wiring / appliances\n- No water at all in entire house (especially with elderly/children)\n- Water heater leaking heavily / water heater burst\n- Ceiling collapsing from water / water through ceiling\n\nCLASSIFY AS **URGENT** if customer describes ANY of:\n- Active leak that cannot be contained / leak spreading\n- No hot water (but cold water works)\n- Toilet overflowing / toilet won't stop running\n- Clogged drain with water backing up\n- Sump pump failure during rain\n- Frozen pipes / no water in winter\n- Low water pressure suddenly (whole house)\n\nCLASSIFY AS **STANDARD** for:\n- Dripping faucet / slow leak (contained)\n- Slow drain / minor clog\n- Running toilet (not overflowing)\n- Installation requests (faucet, fixture, appliance)\n- Inspections / maintenance\n- General plumbing questions\n- Non-urgent repairs\n\n**EMERGENCY SAFETY PROTOCOL (if EMERGENCY detected):**\nImmediately provide safety guidance:\n- Gas smell: 'If you smell gas, leave the area immediately. Do not use electrical switches. Call 911 from a safe location.'\n- Water near electricity: 'Do not touch electrical equipment. Turn off power at breaker if safe. Call 911 if danger.'\n- Major flooding: 'Move valuables up. Avoid standing water. Call us immediately for emergency dispatch.'\n\n**STEP 3 - FOR BOOKING SERVICE CALLS:**\nCollect information ONE piece at a time. Ask politely:\n\nA) 'May I have your full name, please?'\n   - Wait for response\n\nB) 'What is your phone number?'\n   - Wait for response\n\nC) 'What is the service address?'\n   - Wait for response\n\nD) 'What plumbing service do you need?'\n   - Options: leak repair, clogged drain, toilet repair, water heater, faucet repair, sewer service, pipe repair, installation, inspection, emergency plumbing, general plumbing\n\nE) 'Can you describe the problem?'\n   - Wait for response (use for urgency classification)\n\nF) 'What date would you prefer?'\n   - Use resolve_relative_date for 'tomorrow', 'next monday', etc.\n\nG) 'What time works best?' (12-hour format like '2:30 PM')\n   - Wait for response\n\nH) 'Email for confirmation?' (optional, for non-emergency)\n\n**STEP 4 - CONFIRM ALL DETAILS:**\n'Let me confirm: [Name], [Phone], [Address], [Service] on [Date] at [Time]. [Urgency level]. Correct?'\n\n**STEP 5 - BOOK:**\nCall book_appointment with all collected details.\n\n**FOR EXISTING APPOINTMENTS:**\nUse get_customer_appointments or cancel_appointment.\n\n**FOR SERVICE QUESTIONS:**\nUse get_service_info.\n\nBe warm, professional, and efficient. Never rush the caller.",
+      "functions": [
+        {
+          "name": "book_appointment",
+          "description": "Book a new plumbing service call. Collect: customer name, phone, address, service type, problem description, urgency, preferred date/time, optional email. Confirm all details before booking.",
+          "parameters": {
+            "type": "object",
+            "properties": {
+              "customer_name": {
+                "type": "string",
+                "description": "Customer's full name"
+              },
+              "phone": {
+                "type": "string",
+                "description": "Customer's phone number"
+              },
+              "service_address": {
+                "type": "string",
+                "description": "Service address"
+              },
+              "service_type": {
+                "type": "string",
+                "description": "Service type: leak repair, clogged drain, toilet repair, water heater, faucet repair, sewer service, pipe repair, installation, inspection, emergency plumbing, general plumbing"
+              },
+              "problem_description": {
+                "type": "string",
+                "description": "Plumbing problem description"
+              },
+              "urgency": {
+                "type": "string",
+                "description": "Urgency: emergency, urgent, standard"
+              },
+              "preferred_date": {
+                "type": "string",
+                "description": "Date in YYYY-MM-DD or relative (tomorrow, next monday)"
+              },
+              "preferred_time": {
+                "type": "string",
+                "description": "Time in 12-hour format (e.g., 2:30 PM)"
+              },
+              "customer_email": {
+                "type": "string",
+                "description": "Email for confirmation (optional)"
+              }
+            },
+            "required": [
+              "customer_name",
+              "phone",
+              "service_address",
+              "service_type",
+              "problem_description",
+              "urgency",
+              "preferred_date",
+              "preferred_time"
+            ]
+          }
+        },
+        {
+          "name": "cancel_appointment",
+          "description": "Cancel an existing plumbing service call. Requires customer name, phone, and appointment date.",
+          "parameters": {
+            "type": "object",
+            "properties": {
+              "customer_name": {
+                "type": "string",
+                "description": "Customer's full name"
+              },
+              "phone": {
+                "type": "string",
+                "description": "Customer's phone number"
+              },
+              "appointment_date": {
+                "type": "string",
+                "description": "Appointment date in YYYY-MM-DD"
+              }
+            },
+            "required": [
+              "customer_name",
+              "phone",
+              "appointment_date"
+            ]
+          }
+        },
+        {
+          "name": "lookup_customer",
+          "description": "Look up customer record by name and phone.",
+          "parameters": {
+            "type": "object",
+            "properties": {
+              "customer_name": {
+                "type": "string",
+                "description": "Customer's full name"
+              },
+              "phone": {
+                "type": "string",
+                "description": "Customer's phone number"
+              }
+            },
+            "required": [
+              "customer_name",
+              "phone"
+            ]
+          }
+        },
+        {
+          "name": "get_service_info",
+          "description": "Get plumbing service info including duration.",
+          "parameters": {
+            "type": "object",
+            "properties": {
+              "service_name": {
+                "type": "string",
+                "description": "Service: leak repair, clogged drain, toilet repair, water heater, faucet repair, sewer service, pipe repair, installation, inspection, emergency plumbing, general plumbing"
+              }
+            },
+            "required": [
+              "service_name"
+            ]
+          }
+        },
+        {
+          "name": "resolve_relative_date",
+          "description": "Convert relative date (tomorrow, next monday) to YYYY-MM-DD.",
+          "parameters": {
+            "type": "object",
+            "properties": {
+              "relative_date": {
+                "type": "string",
+                "description": "Relative date: today, tomorrow, next monday, in 3 days"
+              }
+            },
+            "required": [
+              "relative_date"
+            ]
+          }
+        },
+        {
+          "name": "check_availability",
+          "description": "Check if date/time slot is available for a service.",
+          "parameters": {
+            "type": "object",
+            "properties": {
+              "preferred_date": {
+                "type": "string",
+                "description": "Date in YYYY-MM-DD or relative"
+              },
+              "preferred_time": {
+                "type": "string",
+                "description": "Time in 12-hour format (e.g., 2:30 PM)"
+              },
+              "service_name": {
+                "type": "string",
+                "description": "Service type"
+              }
+            },
+            "required": [
+              "preferred_date",
+              "preferred_time",
+              "service_name"
+            ]
+          }
+        },
+        {
+          "name": "get_customer_appointments",
+          "description": "Get upcoming service calls for a customer.",
+          "parameters": {
+            "type": "object",
+            "properties": {
+              "customer_name": {
+                "type": "string",
+                "description": "Customer's full name"
+              },
+              "phone": {
+                "type": "string",
+                "description": "Customer's phone number"
+              }
+            },
+            "required": [
+              "customer_name",
+              "phone"
+            ]
+          }
+        }
+      ]
+    },
+    "speak": {
+      "provider": {
+        "type": "deepgram",
+        "model": "flux-jack-en"
+      }
+    },
+    "greeting": "RapidFlow Plumbing. How can I help you today?"
+  }
+}
