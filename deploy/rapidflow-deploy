@@ -1,0 +1,104 @@
+#!/bin/bash
+# RapidFlow Deployment Helper
+# Usage: rapidflow-deploy [pull|build|restart|logs|status|db|help]
+
+set -euo pipefail
+
+APP_DIR="/opt/rapidflow"
+SERVICE_API="rapidflow-api"
+SERVICE_WS="rapidflow-ws"
+
+cmd="${1:-help}"
+
+case "$cmd" in
+    pull)
+        echo "Pulling latest code..."
+        cd "$APP_DIR"
+        sudo -u deploy git pull
+        ;;
+    build)
+        echo "Installing dependencies with uv..."
+        cd "$APP_DIR"
+        sudo -u deploy uv sync --frozen
+        ;;
+    restart)
+        echo "Restarting services..."
+        systemctl restart "$SERVICE_API" "$SERVICE_WS"
+        systemctl status "$SERVICE_API" "$SERVICE_WS" --no-pager
+        ;;
+    stop)
+        echo "Stopping services..."
+        systemctl stop "$SERVICE_API" "$SERVICE_WS"
+        ;;
+    start)
+        echo "Starting services..."
+        systemctl start "$SERVICE_API" "$SERVICE_WS"
+        systemctl status "$SERVICE_API" "$SERVICE_WS" --no-pager
+        ;;
+    status)
+        systemctl status "$SERVICE_API" "$SERVICE_WS" --no-pager
+        ;;
+    logs)
+        service="${2:-}"
+        case "$service" in
+            api) journalctl -u "$SERVICE_API" -f ;;
+            ws)  journalctl -u "$SERVICE_WS" -f ;;
+            nginx) tail -f /var/log/nginx/rapidflow-access.log /var/log/nginx/rapidflow-error.log ;;
+            *)   journalctl -u "$SERVICE_API" -u "$SERVICE_WS" -f ;;
+        esac
+        ;;
+    db)
+        echo "Opening SQLite database..."
+        sqlite3 "$APP_DIR/calendar.db"
+        ;;
+    test)
+        echo "Testing configuration..."
+        cd "$APP_DIR"
+        sudo -u deploy bash -c "source .venv/bin/activate && python -c '
+import os
+from dotenv import load_dotenv
+load_dotenv()
+required = [\"DEEPGRAM_API_KEY\", \"OPENAI_API_KEY\", \"RESEND_API_KEY\", \"TWILIO_ACCOUNT_SID\", \"TWILIO_AUTH_TOKEN\", \"TIMEZONE\"]
+for k in required:
+    v = os.getenv(k)
+    print(f\"{k}: {\"SET\" if v else \"MISSING\"}\")
+'
+python -c '
+import json
+with open(\"credentials.json\") as f:
+    data = json.load(f)
+    print(f\"credentials.json: OK (client_id={data.get(\"client_id\", \"?\")[:20]}...)\"
+'
+python -c '
+import json
+with open(\"token.json\") as f:
+    data = json.load(f)
+    print(f\"token.json: OK (expires={data.get(\"expiry\", \"?\")})\"
+'
+        ;;
+    help|*)
+        cat << 'HELP'
+RapidFlow Deployment Helper
+
+Usage: rapidflow-deploy <command>
+
+Commands:
+  pull      - Pull latest code from git
+  build     - Install/update Python dependencies (uv sync --frozen)
+  restart   - Restart both API and WebSocket services
+  start     - Start both services
+  stop      - Stop both services
+  status    - Show service status
+  logs [api|ws|nginx] - Follow logs (default: both services)
+  db        - Open SQLite database shell
+  test      - Verify environment and secrets configuration
+  help      - Show this help
+
+Examples:
+  rapidflow-deploy pull && rapidflow-deploy build && rapidflow-deploy restart
+  rapidflow-deploy logs api
+  rapidflow-deploy status
+  rapidflow-deploy test
+HELP
+        ;;
+esac
